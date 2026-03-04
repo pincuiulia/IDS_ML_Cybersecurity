@@ -1,118 +1,367 @@
-# ML-Based Intrusion Detection System (IDS)
 
-This project focuses on developing a high-performance Intrusion Detection System (IDS) using Machine Learning to classify network traffic and detect malicious activities (DoS attacks) within a network environment.
+![Python](https://img.shields.io/badge/Python-3.10-blue)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-orange)
+![Status](https://img.shields.io/badge/status-completed-brightgreen)
 
-## 📊 Project Progress
-- [x] **Environment Setup:** Python 3.x, VS Code, and Virtual Environment (.venv).
-- [x] **Data Ingestion:** Processed large-scale network traffic data using Parquet format for efficiency.
-- [x] **Exploratory Data Analysis (EDA):** Analyzed class distributions and statistical properties.
-- [x] **Feature Selection:** Performed dimensionality reduction using Variance Thresholding and Random Forest Importance.
-- [ ] **Model Training:** (Upcoming) Supervised learning implementation.
-- [ ] **Real-time Simulation:** (Upcoming) Testing the model against simulated live attacks.
+# Intrusion Detection System using Machine Learning
+## DoS Attack Detection on Network Traffic
 
----
+## Overview
 
-## 🔍 Phase 1: Exploratory Data Analysis (EDA)
+This project implements a **machine learning-based Intrusion Detection System (IDS)** designed to detect **Denial-of-Service (DoS) attacks** in network traffic.
 
-### Class Distribution (Target Imbalance)
-The dataset reveals a significant class imbalance, a common challenge in Cybersecurity datasets. While "Benign" traffic is the majority, certain attacks like "Heartbleed" have very few samples (11 instances), which will require specific handling during model training.
+The system analyzes network flow statistics and classifies traffic as either **benign** or **malicious**, with additional experiments on **multi-class attack classification**.
 
-![Class Distribution](./data/plots/class_distribution.png)
-*Figure 1: Comparison between normal and malicious traffic frequency.*
+The project follows a complete Data Science workflow:
 
-### Feature Correlation
-A correlation matrix was generated to identify highly redundant variables. This allowed us to understand how different network metrics (like flow duration and packet length) relate to one another.
+1. Exploratory Data Analysis (EDA)
+2. Data Cleaning
+3. Feature Engineering
+4. Model Training
+5. Cross-Validation
+6. Model Evaluation
+7. Binary Attack Detection
+8. ROC Analysis
 
-
-![Correlation Matrix](./data/plots/correlation_matrix.png)
-*Figure 2: Heatmap showing the correlation between network features.*
+The goal is to demonstrate how machine learning models can identify abnormal traffic patterns that indicate cyberattacks.
 
 ---
 
-## ⚙️ Phase 2: Feature Engineering & Selection
+# Dataset
 
-### Data Cleaning & Preprocessing
-To optimize the model's performance and reduce computational load, we performed the following:
-* **Initial Feature Count:** 78 columns.
-* **Constant Variance Removal:** 10 columns were eliminated because they contained only a single unique value (zero variance), providing no predictive power.
-* **Label Encoding:** Categorical attack names (e.g., "DoS Hulk") were converted into numerical labels (0, 1, 2...) for algorithmic processing.
+The dataset used is the **CIC DoS Wednesday dataset** from the **CICIDS2017 collection**.
 
-### Feature Importance Analysis
-Using a **Random Forest Classifier**, we ranked the remaining 68 features to identify the most critical "signatures" of an attack. This step helps prevent overfitting and speeds up the training process.
+It contains network flow statistics extracted from packet captures.
 
-![Feature Importance](./data/plots/feature_importance.png)
-*Figure 3: Top 15 network features ranked by their impact on attack detection.*
+Each row represents a **network flow** with statistical features such as:
 
-#### Key Findings (Top 5 Features):
-| Rank | Feature | Importance Score | Description |
-| :--- | :--- | :--- | :--- |
-| 1 | **Bwd Packet Length Std** | 0.1070 | Standard deviation of packet size in the backward direction. |
-| 2 | **Bwd Packet Length Max** | 0.0973 | Maximum size of packets received from the server. |
-| 3 | **Subflow Bwd Bytes** | 0.0931 | Average number of bytes in a subflow in the backward direction. |
-| 4 | **Packet Length Variance** | 0.0659 | Variance of the size of all packets in a flow. |
-| 5 | **Packet Length Max** | 0.0583 | The largest packet size recorded in the flow. |
+- Flow Duration
+- Packet length statistics
+- Forward / backward packet counts
+- Flow bytes per second
+- Flow packets per second
+- TCP flags
 
-**Strategic Decision:** Based on this analysis, the model will be trained on the top 15-20 features, which capture the vast majority of the signal needed to differentiate between normal traffic and a DoS attack.
+## Traffic Classes
 
-### Advanced Feature Importance Analysis
-To finalize our feature selection, we conducted a cumulative importance analysis. This allowed us to quantify exactly how much "intelligence" we retain by simplifying the dataset.
+| Label | Description |
+|---|---|
+| Benign | Normal network traffic |
+| DoS Hulk | High-rate HTTP flooding |
+| DoS GoldenEye | Web server overload attack |
+| DoS slowloris | Slow HTTP header attack |
+| DoS Slowhttptest | Slow body attack |
+| Heartbleed | TLS vulnerability exploitation |
 
-| Rank | Feature | Individual Impact | Cumulative Impact |
-| :--- | :--- | :--- | :--- |
-| 1 | **Bwd Packet Length Std** | 10.71% | 10.71% |
-| 2 | **Bwd Packet Length Max** | 9.73% | 20.44% |
-| 3 | **Subflow Bwd Bytes** | 9.32% | 29.76% |
-| 4 | **Packet Length Variance** | 6.59% | 36.35% |
-| 5 | **Packet Length Max** | 5.84% | 42.19% |
-| ... | ... | ... | ... |
-| 15 | **Fwd IAT Std** | 1.69% | **75.39%** |
+**Note:** The dataset is highly imbalanced (≈66% Benign, ≈0.001% Heartbleed), requiring specialized techniques for imbalanced learning.
 
-**Strategic Outcome:** By utilizing only these 15 features (instead of the original 78), we maintain **~75% of the model's predictive capability**. This drastic reduction significantly enhances processing speed, reduces memory consumption, and minimizes the risk of overfitting during the training phase.
-
-![Pareto Feature Analysis](./data/plots/feature_importance_pareto.png)
-
-### Multicollinearity & Redundancy Removal
-After the initial feature importance analysis, we performed a secondary optimization by analyzing the **Correlation Matrix**. 
-
-* **The Problem:** Several features showed a correlation > 0.95 (e.g., Forward vs. Backward packet counts), indicating they provide redundant information.
-* **The Solution:** We implemented an automated script to drop highly correlated features.
-* **Final Result:** The feature set was reduced from **68 to 41 high-signal variables**.
-
-**Why this matters:** Reducing the feature count to the most unique 41 variables prevents model instability, speeds up the training process, and ensures the model focuses on distinct patterns rather than duplicated noise.
-
-![Correlation Matrix for top 15 features.](./data/plots/feature_importance_correlation_matrix.png)
+![Class Distribution](data/plots/class_distribution.png)
 
 ---
 
-## 🚀 Phase 3: Model Training & Evaluation
+# Project Structure
 
-### Training Strategy
-To address the extreme class imbalance (only 11 Heartbleed samples vs 300k+ benign), we implemented a robust pipeline:
-1.  **Stratified Train-Test Split:** Ensured rare attacks were present in both training and testing sets.
-2.  **RobustScaler:** Handled outliers in network traffic data.
-3.  **SMOTE (Synthetic Minority Over-sampling Technique):** Generated synthetic examples for minority classes during training to prevent bias.
-4.  **Algorithm:** Random Forest Classifier (n_estimators=100).
-
-### 🏆 Final Results (Test Set)
-The model achieved near-perfect performance on the unseen Test Set, successfully detecting all attack types, including the ultra-rare Heartbleed attack.
-
-| Metric | Score | Note |
-| :--- | :--- | :--- |
-| **Accuracy** | **99.9%** | Overall correctness |
-| **Macro F1-Score** | **1.00** | Balanced performance across all classes |
-| **Heartbleed Recall**| **1.00** | Successfully detected 100% of rare attacks |
-
-**Classification Report:**
 ```text
-              precision    recall  f1-score   support
-           0       1.00      1.00      1.00     78248
-           1       0.99      1.00      1.00      2057
-           2       1.00      1.00      1.00     34569
-           3       0.98      1.00      0.99      1046
-           4       0.99      0.99      0.99      1077
-           5       1.00      1.00      1.00         2 (Heartbleed)
+IDS_ML_Cybersecurity/
+├── data/
+│   ├── DoS-Wednesday-no-metadata.parquet
+│   ├── DoS-Wednesday-CLEANED.parquet
+│   ├── DoS-Wednesday-PROCESSED.parquet
+│   └── highly_skewed_features.json
+├── notebooks/
+│   ├── 01_EDA_Cleaning.ipynb
+│   ├── 02_Feature_Engineering.ipynb
+│   └── 03_Model_Training.ipynb
+└── README.md
+```
 
-## 🛠️ How to Run
-1. Activate the environment: `source .venv/bin/activate` (Mac/Linux) or `.venv\Scripts\activate` (Windows).
-2. Install dependencies: `pip install pandas scikit-learn seaborn matplotlib pyarrow`.
-3. Run the notebooks in order: `01_EDA_&_Cleaning.ipynb`, `02_Feature_Engineering.ipynb`.
+---
+
+# 1. Exploratory Data Analysis (EDA)
+
+EDA was performed to understand:
+
+- Class imbalance
+- Feature distributions
+- Correlations
+- Data quality
+
+### Dataset Size
+
+```
+Rows: ~584,000
+Features: 78
+```
+
+### Class Distribution
+
+| Traffic Type | Percentage |
+|---|---|
+| Benign | ~66% |
+| DoS Hulk | ~29% |
+| DoS GoldenEye | ~1.7% |
+| DoS slowloris | ~0.9% |
+| DoS Slowhttptest | ~0.9% |
+| Heartbleed | ~0.001% |
+
+The dataset is **highly imbalanced**, which is typical in cybersecurity datasets.
+
+---
+
+# 2. Data Cleaning
+
+The following steps were applied:
+
+## Missing Values
+
+```
+Missing values across all columns: 0
+```
+
+## Infinite Values
+
+Some network features may produce infinite values.
+
+```python
+df.replace([np.inf, -np.inf], np.nan, inplace=True)
+df.dropna(inplace=True)
+```
+## Correlaton Matrix
+
+![Correlation Matrix](data/plots/correlation_matrix.png)
+
+## Constant Feature Removal
+
+Columns with zero variance provide no predictive value and were removed.
+
+```python
+constant_columns = [col for col in df.columns if df[col].nunique() <= 1]
+df.drop(columns=constant_columns, inplace=True)
+```
+
+---
+
+# 3. Feature Engineering
+
+## Log Transformation
+
+![Skewness distribution](data/plots/skewness_distribution.png)
+To reduce skewness in numerical features, a log transformation was applied:
+
+$$
+x' = log(1 + x)
+$$
+
+```python
+df[col] = np.log1p(df[col])
+```
+This compresses extreme values and improves model learning.
+
+---
+## Label Encoding
+
+The categorical labels were converted into numerical values:
+
+| Class | Encoded Value |
+|---|---|
+| Benign | 0 |
+| DoS GoldenEye | 1 |
+| DoS Hulk | 2 |
+| DoS slowloris | 3 |
+| DoS Slowhttptest | 4 |
+| Heartbleed | 5 |
+
+---
+
+# 4. Machine Learning Pipeline
+
+The model was implemented using a **scikit-learn pipeline**.
+
+### Pipeline Structure
+
+```text
+RobustScaler → SMOTE → RandomForestClassifier
+```
+
+### RobustScaler
+
+SMOTE relies on **distance calculations**, so scaling helps prevent large features from dominating the distance metric.
+
+### SMOTE
+
+SMOTE (Synthetic Minority Oversampling Technique) generates synthetic samples for minority classes.
+
+Due to the extremely small **Heartbleed** class, the parameter was adjusted:
+
+```python
+SMOTE(k_neighbors=1)
+```
+
+### Random Forest Classifier
+
+The classifier used:
+
+```python
+RandomForestClassifier(
+    n_estimators=200,
+    random_state=42,
+    n_jobs=-1
+)
+```
+
+Random Forest was selected because it:
+
+- Handles nonlinear relationships
+- Is robust to outliers
+- Performs well on tabular datasets
+
+---
+
+# 5. Cross Validation
+
+Stratified K-Fold Cross Validation was applied.
+
+```python
+StratifiedKFold(n_splits=3)
+```
+
+Stratification ensures class distributions remain consistent across folds.
+
+### Results
+
+```text
+CV scores: [0.9409, 0.9955, 0.9948]
+Mean CV: 0.977
+```
+
+This indicates strong stability across different training splits.
+
+---
+
+# 6. Multi-Class Evaluation
+
+### Classification Report
+
+```text
+Accuracy: 1.00
+Macro F1-score: 0.99
+Weighted F1-score: 1.00
+```
+
+The model performs extremely well across most classes.
+
+However, the **Heartbleed** class contains extremely few samples, so its metrics are not statistically reliable.
+
+---
+
+# Confusion Matrix
+
+The confusion matrix shows very few misclassifications.
+
+Most errors occur between similar DoS attack types, which share comparable traffic characteristics.
+
+---
+
+# 7. Binary Attack Detection
+
+To improve scientific validity, the dataset was also converted into a **binary classification problem**.
+
+```text
+0 → Benign
+1 → Attack
+```
+
+This setup better reflects how real Intrusion Detection Systems typically operate.
+
+---
+
+# ROC Curve
+
+The model achieved:
+
+```text
+AUC = 0.9999
+```
+
+This indicates **near-perfect separation between benign and malicious traffic**.
+
+---
+
+## Interpretation
+
+The strong performance can be explained by:
+
+- Distinct network flow patterns for **DoS attacks**
+- Statistical traffic features capturing **abnormal behavior**
+- Random Forest capturing **nonlinear relationships**
+
+---
+
+## Limitations
+
+Despite strong performance, several limitations exist.
+
+### Rare Attack Samples
+
+The **Heartbleed** class contains extremely few samples, making evaluation unreliable.
+
+### Synthetic Oversampling
+
+**SMOTE** generates artificial samples that may not perfectly represent real attacks.
+
+### Controlled Dataset
+
+The **CICIDS dataset** was generated in a controlled environment and may not fully reflect real-world network traffic.
+
+### Concept Drift
+
+The model was not evaluated against **evolving attack patterns**, which are common in real cybersecurity environments.
+
+---
+
+## Future Improvements
+
+Possible improvements include:
+
+- Testing gradient boosting models (**XGBoost**, **LightGBM**)
+- Hyperparameter tuning
+- Feature importance analysis
+- Real-time network monitoring integration
+- Deployment in a streaming IDS pipeline
+
+---
+
+## Technologies Used
+
+- Python
+- Pandas
+- NumPy
+- Scikit-learn
+- Imbalanced-learn
+- Matplotlib
+- Seaborn
+
+---
+
+## Skills Demonstrated
+
+- Data preprocessing
+- Handling imbalanced datasets
+- Feature engineering
+- Cross validation
+- Model evaluation
+- Cybersecurity data analysis
+
+---
+
+## Conclusion
+
+This project demonstrates how **machine learning models can detect anomalous network behavior associated with DoS attacks**.
+
+The **Random Forest model combined with SMOTE** achieved extremely strong performance on the CICIDS dataset while also highlighting important challenges such as **class imbalance** and **dataset realism**.
+
+---
+
+## Author
+
+**Iulia Pincu**
