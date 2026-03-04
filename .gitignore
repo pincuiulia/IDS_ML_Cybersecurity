@@ -1,0 +1,15 @@
+# Python & Venv
+__pycache__/
+*.py[cod]
+.venv/
+.env
+.DS_Store
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Data (NEVER upload raw data to GitHub)
+data/*.parquet
+data/*.csv
+data/processed/
+
